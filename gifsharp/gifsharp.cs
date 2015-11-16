@@ -1,10 +1,27 @@
-﻿using UnityEngine;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 public class GifLoader
-	: MonoBehaviour
 {
+    public void Start()
+    {
+        var path = "C:\\temp\\rocklee.gif";
+        var raw = System.IO.File.ReadAllBytes(path);
+        var bytes = new List<byte>(raw);
+
+        Gif gif = GifUtil.read_gif_file(path, bytes);
+    }
+}
+
+public class ListCreate<T>
+{
+    public static List<T> Create(int size, T default_value)
+    {
+        var result = new List<T>(size);
+        for (int i = 0; i < size; ++i)
+            result.Add(default_value);
+        return result;
+    }
 }
 
 public class GifFILE
@@ -63,14 +80,14 @@ public class GifColor
 
     public GifColor()
     {
-    } 
+    }
 
     public GifColor(int r, int g, int b)
     {
         this.r = r;
         this.g = g;
         this.b = b;
-    } 
+    }
 }
 
 public class GifPalette
@@ -149,7 +166,7 @@ public class GIF
 
     public const int IMAGE_LOADING = 0;       /* file_state = processing */
     public const int IMAGE_SAVING = 0;       /* file_state = processing */
-    public const int IMAGE_COMPLETE  = 1;       /* finished reading or writing */
+    public const int IMAGE_COMPLETE = 1;       /* finished reading or writing */
 }
 
 public class GifDecoder
@@ -178,70 +195,12 @@ public class GifDecoder
 
 public struct GifUtil
 {
-    /*
-    int read_gif_int(FILE* file);
-    void write_gif_int(FILE* file, int output);
-
-    GifData* new_gif_data(int size);
-    GifData* read_gif_data(FILE* file);
-    void del_gif_data(GifData* data);
-    void write_gif_data(FILE* file, GifData* data);
-    void print_gif_data(FILE* file, GifData* data);
-
-    GifPalette* new_gif_palette(void);
-    void del_gif_palette(GifPalette* cmap);
-    void read_gif_palette(FILE* file, GifPalette* cmap);
-    void write_gif_palette(FILE* file, GifPalette* cmap);
-    void print_gif_palette(FILE* file, GifPalette* cmap);
-
-    GifScreen* new_gif_screen(void);
-    void del_gif_screen(GifScreen* screen);
-    void read_gif_screen(FILE* file, GifScreen* screen);
-    void write_gif_screen(FILE* file, GifScreen* screen);
-    void print_gif_screen(FILE* file, GifScreen* screen);
-
-    GifExtension* new_gif_extension(void);
-    void del_gif_extension(GifExtension* ext);
-    void read_gif_extension(FILE* file, GifExtension* ext);
-    void write_gif_extension(FILE* file, GifExtension* ext);
-    void print_gif_extension(FILE* file, GifExtension* ext);
-
-    GifDecoder* new_gif_decoder(void);
-    void del_gif_decoder(GifDecoder* decoder);
-    void init_gif_decoder(FILE* file, GifDecoder* decoder);
-
-    int read_gif_code(FILE* file, GifDecoder* decoder);
-    void read_gif_line(FILE* file, GifDecoder* decoder, unsigned char* line, int length);
-
-    GifPicture* new_gif_picture(void);
-    void del_gif_picture(GifPicture* pic);
-    void read_gif_picture(FILE* file, GifPicture* pic);
-    void write_gif_picture(FILE* file, GifPicture* pic);
-    void print_gif_picture(FILE* file, GifPicture* pic);
-
-    GifBlock* new_gif_block(void);
-    void del_gif_block(GifBlock* block);
-    void read_gif_block(FILE* file, GifBlock* block);
-    void write_gif_block(FILE* file, GifBlock* block);
-    void print_gif_block(FILE* file, GifBlock* block);
-
-    Gif* new_gif(void);
-    void del_gif(Gif* gif);
-    void read_gif(FILE* file, Gif* gif);
-    void read_one_gif_picture(FILE* file, Gif* gif);
-    void write_gif(FILE* file, Gif* gif);
-    void print_gif(FILE* file, Gif* gif);
-    */
-
-    //Gif* read_gif_file(const char* filename);
-    //void write_gif_file(const char* filename, Gif* gif);
-
-    GifColor rgb(int r, int g, int b)
+    public static GifColor rgb(int r, int g, int b)
     {
         return new GifColor(r, g, b);
     }
 
-    void init_gif_decoder(GifFILE file, GifDecoder decoder)
+    public static void init_gif_decoder(GifFILE file, GifDecoder decoder)
     {
         int lzw_min = file.read_byte();
         int depth = lzw_min;
@@ -249,7 +208,7 @@ public struct GifUtil
         decoder.file_state = GIF.IMAGE_LOADING;
         decoder.position = 0;
         decoder.bufsize = 0;
-        decoder.buf = new List<byte>(256);
+        decoder.buf = ListCreate<byte>.Create(256, 0);
         decoder.depth = depth;
         decoder.clear_code = (1 << depth);
         decoder.eof_code = decoder.clear_code + 1;
@@ -261,15 +220,15 @@ public struct GifUtil
         decoder.shift_state = 0;
         decoder.shift_data = 0;
 
-        decoder.stack = new List<byte>(GIF.LZ_MAX_CODE+1);
-        decoder.suffix = new List<byte>(GIF.LZ_MAX_CODE+1);
-        decoder.prefix = new List<uint>(GIF.LZ_MAX_CODE+1);
+        decoder.stack = ListCreate<byte>.Create(GIF.LZ_MAX_CODE + 1, 0);
+        decoder.suffix = ListCreate<byte>.Create(GIF.LZ_MAX_CODE + 1, 0);
+        decoder.prefix = ListCreate<uint>.Create(GIF.LZ_MAX_CODE + 1, 0);
 
         for (int i = 0; i < decoder.prefix.Count; ++i)
             decoder.prefix[i] = GIF.NO_SUCH_CODE;
     }
 
-    void read_gif_picture(GifFILE file, GifPicture picture)
+    public static void read_gif_picture(GifFILE file, GifPicture picture)
     {
         picture.left = file.read_gif_int();
         picture.top = file.read_gif_int();
@@ -285,21 +244,24 @@ public struct GifUtil
 
         if (picture.has_cmap != 0)
         {
+            picture.cmap = new GifPalette();
+
             picture.cmap_depth = (info & 0x07) + 1;
             picture.cmap.length = 1 << picture.cmap_depth;
+
             read_gif_palette(file, picture.cmap, picture.cmap.length);
         }
 
         read_gif_picture_data(file, picture);
     }
 
-    void read_gif_picture_data(GifFILE file, GifPicture picture)
+    public static void read_gif_picture_data(GifFILE file, GifPicture picture)
     {
         int w = picture.width;
         int h = picture.height;
         int bytes = w * h;
 
-        picture.data = new List<byte>(bytes);
+        picture.data = ListCreate<byte>.Create(bytes, 0);
 
         GifDecoder decoder = new GifDecoder();
 
@@ -333,12 +295,12 @@ public struct GifUtil
         finish_gif_picture(file, decoder);
     }
 
-    int read_gif_code(GifFILE file, GifDecoder decoder)
+    public static int read_gif_code(GifFILE file, GifDecoder decoder)
     {
         return 0;
     }
 
-    int trace_prefix(List<uint> prefix, int code, int clear_code)
+    public static int trace_prefix(List<uint> prefix, int code, int clear_code)
     {
         int i = 0;
 
@@ -348,7 +310,7 @@ public struct GifUtil
         return code;
     }
 
-    void read_gif_line(GifFILE file, GifDecoder decoder, List<byte> line, int offset, int length)
+    public static void read_gif_line(GifFILE file, GifDecoder decoder, List<byte> line, int offset, int length)
     {
         int current_prefix;
         int current_code;
@@ -466,7 +428,7 @@ public struct GifUtil
         decoder.stack_ptr = stack_ptr;
     }
 
-    void finish_gif_picture(GifFILE file, GifDecoder decoder)
+    public static void finish_gif_picture(GifFILE file, GifDecoder decoder)
     {
         List<byte> buf = decoder.buf;
 
@@ -484,15 +446,16 @@ public struct GifUtil
         }
     }
 
-    GifData new_gif_data(int size)
+    public static GifData new_gif_data(int size)
     {
-        return new GifData() {
+        return new GifData()
+        {
             bytes = new List<byte>(),
             byte_count = size,
         };
     }
 
-    GifData read_gif_data(GifFILE file)
+    public static GifData read_gif_data(GifFILE file)
     {
         int size = file.read_byte();
         if (size <= 0)
@@ -505,7 +468,7 @@ public struct GifUtil
         return new GifData();
     }
 
-    int read_stream(GifFILE file, List<byte> bytes, int size)
+    public static int read_stream(GifFILE file, List<byte> bytes, int size)
     {
         for (int i = 0; i < bytes.Count; ++i)
             bytes[i] = 0;
@@ -515,7 +478,7 @@ public struct GifUtil
         return read;
     }
 
-    void read_gif_extension(GifFILE file, GifExtension extension)
+    public static void read_gif_extension(GifFILE file, GifExtension extension)
     {
         extension.marker = file.read_byte();
 
@@ -529,8 +492,10 @@ public struct GifUtil
         extension.data_count = extension.data.Count;
     }
 
-    void read_gif_palette(GifFILE file, GifPalette palette, int length)
+    public static void read_gif_palette(GifFILE file, GifPalette palette, int length)
     {
+        palette.colors = new List<GifColor>(length);
+
         for (int i = 0; i < length; ++i)
         {
             var r = file.read_byte();
@@ -543,7 +508,7 @@ public struct GifUtil
         }
     }
 
-    void read_gif_screen(GifFILE file, GifScreen screen)
+    public static void read_gif_screen(GifFILE file, GifScreen screen)
     {
         screen.width = file.read_gif_int();
         screen.height = file.read_gif_int();
@@ -560,12 +525,14 @@ public struct GifUtil
 
         if (screen.has_cmap != 0)
         {
+            screen.cmap = new GifPalette();
+
             var length = 1 << screen.cmap_depth;
             read_gif_palette(file, screen.cmap, length);
         }
     }
 
-    void read_gif_block(GifFILE file, GifBlock block)
+    public static void read_gif_block(GifFILE file, GifBlock block)
     {
         block.intro = file.read_byte();
 
@@ -584,9 +551,9 @@ public struct GifUtil
         }
     }
 
-    void read_gif(GifFILE file, Gif gif)
+    public static void read_gif(GifFILE file, Gif gif)
     {
-        gif.header = new List<char>(8);
+        gif.header = ListCreate<char>.Create(8, (char)0);
 
         for (int i = 0; i < 6; ++i)
         {
@@ -596,7 +563,10 @@ public struct GifUtil
         if (gif.header[0] != 'G' || gif.header[1] != 'I' || gif.header[2] != 'F')
             return;
 
+        gif.screen = new GifScreen();
         read_gif_screen(file, gif.screen);
+
+        gif.blocks = new List<GifBlock>();
 
         while (true)
         {
@@ -629,7 +599,7 @@ public struct GifUtil
         }
     }
 
-    public Gif read_gif_file(string filename, List<byte> bytes)
+    public static Gif read_gif_file(string filename, List<byte> bytes)
     {
         GifFILE file = new GifFILE(bytes);
         Gif gif = new Gif();
@@ -642,4 +612,3 @@ public struct GifUtil
         return gif;
     }
 }
-        
