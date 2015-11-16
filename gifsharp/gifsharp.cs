@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Collections.Generic;
+
+// ported from: http://sydney.edu.au/engineering/it/~graphapp/package/src/libgif/gif.c
+// ported from: http://sydney.edu.au/engineering/it/~graphapp/package/src/libgif/gif.h
 
 public class GifLoader
 {
@@ -10,6 +15,31 @@ public class GifLoader
         var bytes = new List<byte>(raw);
 
         Gif gif = GifUtil.read_gif_file(path, bytes);
+
+        var width = gif.screen.width;
+        var height = gif.screen.height;
+
+        Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
+        BitmapData data = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format32bppRgb);
+
+        IntPtr ptr = data.Scan0;
+
+        for (int y = 0; y < height; ++y)
+        {
+            IntPtr row = data.Scan0 + data.Stride * y;
+
+            for (int x = 0; x < width; ++x)
+            {
+                var index = y * width + x;
+                var col = gif.blocks[0].pic.data[index];
+
+                // what color format?
+                unsafe
+                {
+                    (*(byte*)row.ToPointer()) = col;
+                }
+            }
+        }
     }
 }
 
